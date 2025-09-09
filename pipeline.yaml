@@ -53,7 +53,7 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: CloudFormation-Build
-      ServiceRole: !GetAtt CodePipelineServiceRole.Arn
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
         Type: CODEPIPELINE
       Environment:
