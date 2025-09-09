@@ -38,15 +38,6 @@ Resources:
         - arn:aws:iam::aws:policy/AWSCodeBuildAdminAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
-      Policies:
-        - PolicyName: AllowSecretsManagerAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: arn:aws:secretsmanager:*:*:secret:github/oauth/token*
 
   # CodeBuild IAM Role
   CodeBuildServiceRole:
@@ -64,7 +55,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
 
-  # CodeBuild Project
+  # CodeBuild Project - Build Stage
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -80,7 +71,27 @@ Resources:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10
 
-  # CodePipeline
+  # CodeBuild Project - Conformity Scan Stage
+  ConformityScanProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: Conformity-Scan
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: CONFORMITY_API_KEY
+            Value: '{{resolve:secretsmanager:cloudone/conformity/api:SecretString:ApiKey}}'
+            Type: SECRETS_MANAGER
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 10
+
+  # CodePipeline Definition
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -124,12 +135,16 @@ Resources:
 
         - Name: ConformityScan
           Actions:
-            - Name: TemplateScanner
+            - Name: RunConformityScan
               ActionTypeId:
-                Category: Test
+                Category: Build
                 Owner: AWS
-                Provider: CloudFormation
+                Provider: CodeBuild
                 Version: "1"
               InputArtifacts:
                 - Name: BuildOutput
+              OutputArtifacts:
+                - Name: ScanOutput
+              Configuration:
+                ProjectName: !Ref ConformityScanProject
               RunOrder: 1
