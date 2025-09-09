@@ -1,0 +1,12 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - pip install trendmicro-cloudone-conformity
+  build:
+    commands:
+      - echo "Running Conformity Template Scanner..."
+      - conformity template validate --template application-template.yaml --output results.json
+artifacts:
+  files:
+    - results.json
