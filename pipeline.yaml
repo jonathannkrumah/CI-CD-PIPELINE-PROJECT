@@ -56,7 +56,7 @@ Resources:
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
 
   # CodeBuild Project - Build Stage
-  CodeBuildProject:
+    CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: CloudFormation-Build
@@ -67,6 +67,10 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:5.0
         Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: CONFORMITY_API_KEY
+            Value: '{{resolve:secretsmanager:cloudone/conformity/api:SecretString:ApiKey}}'
+            Type: SECRETS_MANAGER
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10

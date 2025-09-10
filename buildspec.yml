@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - pip install requests
+  build:
+    commands:
+      - echo "Running Conformity template scan..."
+      - python conformity_scan.py template.yaml
+artifacts:
+  files:
+    - conformity_results.json
