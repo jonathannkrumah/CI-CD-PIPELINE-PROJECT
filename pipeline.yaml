@@ -4,9 +4,11 @@ Description: CI/CD Pipeline with GitHub, CodeBuild, and Cloud One Conformity Sca
 Parameters:
   GitHubOwner:
     Type: String
+    Default: jonathannkrumah
     Description: GitHub username or organization
   GitHubRepo:
     Type: String
+    Default: CI-CD-PIPELINE-PROJECT
     Description: GitHub repository name
   GitHubBranch:
     Type: String
@@ -56,7 +58,7 @@ Resources:
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
 
   # CodeBuild Project - Build Stage
-    CodeBuildProject:
+  CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: CloudFormation-Build
@@ -93,6 +95,7 @@ Resources:
             Type: SECRETS_MANAGER
       Source:
         Type: CODEPIPELINE
+        BuildSpec: buildspec.yml
       TimeoutInMinutes: 10
 
   # CodePipeline Definition
@@ -151,4 +154,20 @@ Resources:
                 - Name: ScanOutput
               Configuration:
                 ProjectName: !Ref ConformityScanProject
+              RunOrder: 1
+
+        - Name: Deploy
+          Actions:
+            - Name: DeployCFN
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: DeployedAppStack
+                Capabilities: CAPABILITY_NAMED_IAM
               RunOrder: 1
