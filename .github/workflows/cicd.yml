@@ -1,46 +1,116 @@
-# name: CI-CD Pipeline with Conformity Scan
+# # name: CI-CD Pipeline with Conformity Scan
+
+# # on:
+# #   push:
+# #     branches:
+# #       - main
+
+# # jobs:
+# #   build-and-deploy:
+# #     runs-on: ubuntu-latest
+# #     env:
+# #       AWS_REGION: us-east-1
+# #       CONFORMITY_REGION: us-west-2
+
+# #     steps:
+# #       - name: Checkout repository
+# #         uses: actions/checkout@v3
+
+# #       - name: Set up Python
+# #         uses: actions/setup-python@v4
+# #         with:
+# #           python-version: 3.9
+
+# #       - name: Install dependencies
+# #         run: pip install requests pyyaml
+
+# #       - name: Debug Conformity API Key
+# #         run: |
+# #           if [ -z "$CONFORMITY_API_KEY" ]; then
+# #             echo "❌ CONFORMITY_API_KEY is missing"
+# #             exit 1
+# #           else
+# #             echo "✅ CONFORMITY_API_KEY is set (length: ${#CONFORMITY_API_KEY})"
+# #           fi
+# #         env:
+# #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+
+# #       - name: Run Conformity Scan (Pre-Deploy)
+# #         run: python conformity_scan.py pipeline.yaml
+# #         env:
+# #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+# #           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
+
+# #       - name: Configure AWS credentials
+# #         uses: aws-actions/configure-aws-credentials@v2
+# #         with:
+# #           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+# #           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+# #           aws-region: ${{ env.AWS_REGION }}
+
+# #       - name: Deploy with CloudFormation
+# #         run: |
+# #           aws cloudformation deploy \
+# #             --template-file pipeline.yaml \
+# #             --stack-name GithubCICDPipeline \
+# #             --capabilities CAPABILITY_NAMED_IAM
+
+# #       - name: Run Conformity Scan (Post-Deploy)
+# #         run: python conformity_scan.py pipeline.yaml
+# #         env:
+# #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+# #           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
+# name: CI/CD Pipeline with Conformity Scan
 
 # on:
 #   push:
 #     branches:
 #       - main
 
+# env:
+#   AWS_REGION: us-east-1
+#   CONFORMITY_REGION: us-west-2
+#   STACK_NAME: DeployedAppStack
+
 # jobs:
 #   build-and-deploy:
 #     runs-on: ubuntu-latest
-#     env:
-#       AWS_REGION: us-east-1
-#       CONFORMITY_REGION: us-west-2
 
 #     steps:
+#       # 1️⃣ Checkout the repo
 #       - name: Checkout repository
 #         uses: actions/checkout@v3
 
+#       # 2️⃣ Set up Python
 #       - name: Set up Python
 #         uses: actions/setup-python@v4
 #         with:
 #           python-version: 3.9
 
+#       # 3️⃣ Install Python dependencies
 #       - name: Install dependencies
 #         run: pip install requests pyyaml
 
-#       - name: Debug Conformity API Key
+#       # 4️⃣ Check Conformity API key
+#       - name: Validate Conformity API Key
 #         run: |
 #           if [ -z "$CONFORMITY_API_KEY" ]; then
 #             echo "❌ CONFORMITY_API_KEY is missing"
 #             exit 1
 #           else
-#             echo "✅ CONFORMITY_API_KEY is set (length: ${#CONFORMITY_API_KEY})"
+#             echo "✅ CONFORMITY_API_KEY is set"
 #           fi
 #         env:
 #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
 
-#       - name: Run Conformity Scan (Pre-Deploy)
-#         run: python conformity_scan.py pipeline.yaml
+#       # 5️⃣ Pre-deploy Conformity scan
+#       - name: Pre-Deploy Conformity Scan
+#         run: python conformity_scan.py template.yaml
 #         env:
 #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
 #           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
 
+#       # 6️⃣ Configure AWS credentials
 #       - name: Configure AWS credentials
 #         uses: aws-actions/configure-aws-credentials@v2
 #         with:
@@ -48,15 +118,22 @@
 #           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 #           aws-region: ${{ env.AWS_REGION }}
 
-#       - name: Deploy with CloudFormation
+#       # 7️⃣ Deploy CloudFormation stack
+#       - name: Deploy CloudFormation Stack
 #         run: |
 #           aws cloudformation deploy \
-#             --template-file pipeline.yaml \
-#             --stack-name GithubCICDPipeline \
+#             --template-file template.yaml \
+#             --stack-name $STACK_NAME \
 #             --capabilities CAPABILITY_NAMED_IAM
 
-#       - name: Run Conformity Scan (Post-Deploy)
-#         run: python conformity_scan.py pipeline.yaml
+#       # 8️⃣ Post-deploy Conformity scan on live stack
+#       - name: Post-Deploy Conformity Scan
+#         run: |
+#           aws cloudformation get-template \
+#             --stack-name $STACK_NAME \
+#             --query TemplateBody \
+#             --output text > deployed_template.yaml
+#           python conformity_scan.py deployed_template.yaml
 #         env:
 #           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
 #           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
@@ -71,13 +148,14 @@ env:
   AWS_REGION: us-east-1
   CONFORMITY_REGION: us-west-2
   STACK_NAME: DeployedAppStack
+  S3_BUCKET: 927311782751-codepipeline-artifacts  # Replace with your S3 bucket name
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repo
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -91,7 +169,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests pyyaml
 
-      # 4️⃣ Check Conformity API key
+      # 4️⃣ Validate Conformity API Key
       - name: Validate Conformity API Key
         run: |
           if [ -z "$CONFORMITY_API_KEY" ]; then
@@ -103,14 +181,23 @@ jobs:
         env:
           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
 
-      # 5️⃣ Pre-deploy Conformity scan
+      # 5️⃣ Pre-Deploy Conformity Scan
       - name: Pre-Deploy Conformity Scan
-        run: python conformity_scan.py template.yaml
+        run: python conformity_scan.py template.yaml > conformity_results_pre.json
         env:
           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
 
-      # 6️⃣ Configure AWS credentials
+      # 6️⃣ Upload Pre-Deploy Scan Results to S3
+      - name: Upload Pre-Deploy Scan Results to S3
+        run: |
+          aws s3 cp conformity_results_pre.json s3://${{ env.S3_BUCKET }}/pre-deploy/conformity_results_pre_${GITHUB_RUN_NUMBER}.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+
+      # 7️⃣ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -118,7 +205,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 7️⃣ Deploy CloudFormation stack
+      # 8️⃣ Deploy CloudFormation Stack
       - name: Deploy CloudFormation Stack
         run: |
           aws cloudformation deploy \
@@ -126,14 +213,23 @@ jobs:
             --stack-name $STACK_NAME \
             --capabilities CAPABILITY_NAMED_IAM
 
-      # 8️⃣ Post-deploy Conformity scan on live stack
+      # 9️⃣ Post-Deploy Conformity Scan
       - name: Post-Deploy Conformity Scan
         run: |
           aws cloudformation get-template \
             --stack-name $STACK_NAME \
             --query TemplateBody \
             --output text > deployed_template.yaml
-          python conformity_scan.py deployed_template.yaml
+          python conformity_scan.py deployed_template.yaml > conformity_results_post.json
         env:
           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
+
+      # 🔟 Upload Post-Deploy Scan Results to S3
+      - name: Upload Post-Deploy Scan Results to S3
+        run: |
+          aws s3 cp conformity_results_post.json s3://${{ env.S3_BUCKET }}/post-deploy/conformity_results_post_${GITHUB_RUN_NUMBER}.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
