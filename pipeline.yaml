@@ -85,6 +85,7 @@ Resources:
   # ----------------------------
   CICDPipeline:
     Type: AWS::CodePipeline::Pipeline
+    DependsOn: MyBuildProject
     Properties:
       RoleArn: !GetAtt PipelineRole.Arn
       ArtifactStore:
