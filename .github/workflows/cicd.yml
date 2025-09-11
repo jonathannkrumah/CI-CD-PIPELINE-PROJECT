@@ -9,9 +9,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
-      CONFORMITY_REGION: us-west-2
       AWS_REGION: us-east-1
+      CONFORMITY_REGION: us-west-2
 
     steps:
       - name: Checkout repository
@@ -20,19 +19,29 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: 3.9
 
       - name: Install dependencies
         run: pip install requests pyyaml
 
-      - name: Run Conformity Scan (Security Gate)
+      - name: Debug Conformity API Key
+        run: |
+          if [ -z "$CONFORMITY_API_KEY" ]; then
+            echo "❌ CONFORMITY_API_KEY is missing"
+            exit 1
+          else
+            echo "✅ CONFORMITY_API_KEY is set (length: ${#CONFORMITY_API_KEY})"
+          fi
+        env:
+          CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+
+      - name: Run Conformity Scan (Pre-Deploy)
         run: python conformity_scan.py pipeline.yaml
         env:
           CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
           CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}
 
       - name: Configure AWS credentials
-        if: success()   # only run if scan passed
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -40,9 +49,14 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy with CloudFormation
-        if: success()   # only run if scan passed
         run: |
           aws cloudformation deploy \
             --template-file pipeline.yaml \
             --stack-name GithubCICDPipeline \
             --capabilities CAPABILITY_NAMED_IAM
+
+      - name: Run Conformity Scan (Post-Deploy)
+        run: python conformity_scan.py pipeline.yaml
+        env:
+          CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+          CONFORMITY_REGION: ${{ env.CONFORMITY_REGION }}

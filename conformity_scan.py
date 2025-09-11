@@ -1,36 +1,39 @@
-#!/usr/bin/env python3
 import os
 import sys
 import json
 import requests
 import yaml
 
-# Read inputs
-if len(sys.argv) != 2:
-    print("Usage: python conformity_scan.py <template-file>")
+# Load environment variables
+api_key = os.getenv("CONFORMITY_API_KEY")
+region = os.getenv("CONFORMITY_REGION", "us-west-2")
+
+if not api_key:
+    print("❌ Missing CONFORMITY_API_KEY in environment")
+    sys.exit(1)
+
+# API endpoint
+url = f"https://{region}-api.cloudconformity.com/v1/template-scanner/scan"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"ApiKey {api_key}"
+}
+
+# Get template path from CLI
+if len(sys.argv) < 2:
+    print("❌ Usage: python conformity_scan.py <template.yaml>")
     sys.exit(1)
 
 template_file = sys.argv[1]
 
-with open(template_file, "r") as f:
-    template_contents = f.read()
-
-# Environment variables (from GitHub secrets)
-API_KEY = os.getenv("CONFORMITY_API_KEY")
-REGION = os.getenv("CONFORMITY_REGION", "us-west-2")  # default to us-west-2
-
-if not API_KEY:
-    print("❌ Missing CONFORMITY_API_KEY in environment")
+try:
+    with open(template_file, "r") as f:
+        template_contents = f.read()
+except Exception as e:
+    print(f"❌ Failed to read template: {e}")
     sys.exit(1)
 
-# API Endpoint
-url = f"https://{REGION}-api.cloudconformity.com/v1/template-scanner/scan"
-
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": f"ApiKey {API_KEY}",
-}
-
+# Build payload
 payload = {
     "data": {
         "type": "template-scan",
@@ -41,49 +44,23 @@ payload = {
     }
 }
 
+# Send request
 print(f"🔎 Using Conformity API endpoint: {url}")
-
-# Call API
 response = requests.post(url, headers=headers, data=json.dumps(payload))
 
 if response.status_code != 200:
     print(f"❌ Scan failed: {response.status_code} {response.text}")
     sys.exit(1)
 
-data = response.json().get("data", [])
+result = response.json()
+print("✅ Scan completed successfully")
 
-if not data:
-    print("✅ No issues found in the template!")
-    sys.exit(0)
-
-# Parse results
-failures = []
-print("\n🔍 Scan Results:")
-print("-" * 80)
-for check in data:
-    attributes = check.get("attributes", {})
-    rule_title = attributes.get("rule-title", "Unknown Rule")
-    risk = attributes.get("pretty-risk-level", "Unknown")
-    status = attributes.get("status", "Unknown")
-    message = attributes.get("message", "")
-    resolution = attributes.get("resolution-page-url", "")
-
-    print(f"{'❌' if status == 'FAILURE' else '✅'} {rule_title}")
-    print(f"   - Risk: {risk}")
-    print(f"   - Message: {message}")
-    if resolution:
-        print(f"   - Fix: {resolution}")
-    print("")
-
-    # Fail pipeline if risk level is High/Very High
-    if status == "FAILURE" and risk in ["High", "Very High"]:
-        failures.append(rule_title)
-
-print("-" * 80)
-
-if failures:
-    print(f"❌ Build failed due to high-risk issues: {', '.join(failures)}")
+# Fail pipeline if violations are found
+violations = result.get("data", {}).get("attributes", {}).get("violations", [])
+if violations:
+    print("❌ Violations detected:")
+    for v in violations:
+        print(f"- {v}")
     sys.exit(1)
 else:
-    print("✅ No High/Very High risk issues found")
-    sys.exit(0)
+    print("✅ No violations found")
