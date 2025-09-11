@@ -10,6 +10,11 @@ phases:
     commands:
       - echo "Running Conformity template scan..."
       - python conformity_scan.py template.yaml
+  post_build:
+    commands:
+      - echo "Build finished. Conformity scan results:"
+      - cat conformity_results.json
+
 artifacts:
   files:
     - conformity_results.json

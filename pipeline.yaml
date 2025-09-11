@@ -3,7 +3,7 @@ Description: CI/CD Pipeline with Conformity Scan and Deploy (GitHub Source via C
 
 Resources:
   # ----------------------------
-  # S3 Bucket for CodePipeline
+  # S3 Bucket for CodePipeline Artifacts
   # ----------------------------
   ArtifactBucket:
     Type: AWS::S3::Bucket
@@ -39,6 +39,38 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
+
+  # ----------------------------
+  # IAM Role for CodeBuild
+  # ----------------------------
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  # ----------------------------
+  # CodeBuild Project
+  # ----------------------------
+  MyBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: MyBuildProject
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.yml   # Ensure this file exists in your repo root
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:6.0
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
 
   # ----------------------------
   # CodePipeline
@@ -79,7 +111,7 @@ Resources:
               OutputArtifacts:
                 - Name: BuildOutput
               Configuration:
-                ProjectName: MyBuildProject
+                ProjectName: !Ref MyBuildProject
 
         - Name: Deploy
           Actions:
