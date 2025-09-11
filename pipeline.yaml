@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CI/CD Pipeline with Conformity Scan and Deploy (GitHub Source)
+Description: CI/CD Pipeline with Conformity Scan and Deploy (GitHub Source via CodeStar Connection)
 
 Resources:
   # ----------------------------
@@ -56,14 +56,13 @@ Resources:
             - Name: GitHubSource
               ActionTypeId:
                 Category: Source
-                Owner: ThirdParty
-                Provider: GitHub
+                Owner: AWS
+                Provider: CodeStarSourceConnection
                 Version: "1"
               Configuration:
-                Owner: jonathannkrumah         # 🔄 replace with your GitHub username/org
-                Repo: CI-CD-PIPELINE-PROJECT                # 🔄 replace with your repository name
-                Branch: main
-                OAuthToken: "{{resolve:secretsmanager:github/oauth/token:SecretString}}"
+                ConnectionArn: arn:aws:codeconnections:us-east-1:927311782751:connection/a92986bb-9866-4284-aea3-763947b7fe31
+                FullRepositoryId: jonathannkrumah/CI-CD-PIPELINE-PROJECT
+                BranchName: main
               OutputArtifacts:
                 - Name: SourceOutput
 
