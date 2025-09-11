@@ -40,3 +40,10 @@ jobs:
             --template-file pipeline.yaml \
             --stack-name GithubCICDPipeline \
             --capabilities CAPABILITY_NAMED_IAM
+      
+      - name: Run Conformity Scan
+        run: python conformity_scan.py pipeline.yaml
+        env:
+          CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+          CONFORMITY_REGION: "us-west-2"
+
