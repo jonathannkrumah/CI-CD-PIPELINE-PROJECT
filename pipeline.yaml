@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CI/CD Pipeline with Conformity Scan and Deploy
+Description: CI/CD Pipeline with Conformity Scan and Deploy (GitHub Source)
 
 Resources:
   # ----------------------------
@@ -53,17 +53,20 @@ Resources:
       Stages:
         - Name: Source
           Actions:
-            - Name: SourceAction
+            - Name: GitHubSource
               ActionTypeId:
                 Category: Source
-                Owner: AWS
-                Provider: CodeCommit
+                Owner: ThirdParty
+                Provider: GitHub
                 Version: "1"
               Configuration:
-                RepositoryName: MyRepository
-                BranchName: main
+                Owner: jonathannkrumah         # 🔄 replace with your GitHub username/org
+                Repo: CI-CD-PIPELINE-PROJECT                # 🔄 replace with your repository name
+                Branch: main
+                OAuthToken: "{{resolve:secretsmanager:github/oauth/token:SecretString}}"
               OutputArtifacts:
                 - Name: SourceOutput
+
         - Name: Build
           Actions:
             - Name: BuildAction
@@ -78,6 +81,7 @@ Resources:
                 - Name: BuildOutput
               Configuration:
                 ProjectName: MyBuildProject
+
         - Name: Deploy
           Actions:
             - Name: DeployCFN
