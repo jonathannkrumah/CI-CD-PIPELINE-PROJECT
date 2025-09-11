@@ -9,8 +9,8 @@ TEMPLATE_FILE = sys.argv[1] if len(sys.argv) > 1 else "template.yaml"
 with open(TEMPLATE_FILE, "r") as f:
     template_body = f.read()
 
-url = "https://us-east-1-api.cloudconformity.com/v1/template-scanner/scan"
-
+# Correct US endpoint for Trend Micro Conformity
+url = "https://us-west-2-api.cloudconformity.com/v1/template-scanner/scan"
 
 headers = {
     "Content-Type": "application/json",
