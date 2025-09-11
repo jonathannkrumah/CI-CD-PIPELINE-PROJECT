@@ -55,12 +55,22 @@ if response.status_code != 200:
 result = response.json()
 print("✅ Scan completed successfully")
 
-# Fail pipeline if violations are found
-violations = result.get("data", {}).get("attributes", {}).get("violations", [])
-if violations:
-    print("❌ Violations detected:")
-    for v in violations:
-        print(f"- {v}")
+# Normalize result to always be a list
+data = result.get("data", [])
+if isinstance(data, dict):
+    data = [data]  # wrap single object into a list
+
+violations_found = False
+for item in data:
+    attrs = item.get("attributes", {})
+    violations = attrs.get("violations", [])
+    if violations:
+        violations_found = True
+        print("❌ Violations detected:")
+        for v in violations:
+            print(f"- {v}")
+
+if violations_found:
     sys.exit(1)
 else:
     print("✅ No violations found")
