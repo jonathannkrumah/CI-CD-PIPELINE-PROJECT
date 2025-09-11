@@ -1,0 +1,42 @@
+name: CI-CD Pipeline with Conformity Scan
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
+      AWS_REGION: eu-north-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Conformity scan
+        run: python conformity_scan.py pipeline.yaml
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy with CloudFormation
+        run: |
+          aws cloudformation deploy \
+            --template-file pipeline.yaml \
+            --stack-name GithubCICDPipeline \
+            --capabilities CAPABILITY_NAMED_IAM
