@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CONFORMITY_API_KEY: ${{ secrets.CONFORMITY_API_KEY }}
-      AWS_REGION: eu-north-1
+      AWS_REGION: us-east-1
 
     steps:
       - name: Checkout repository
