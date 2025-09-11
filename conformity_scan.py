@@ -11,6 +11,7 @@ with open(TEMPLATE_FILE, "r") as f:
 
 # Correct US endpoint for Trend Micro Conformity
 url = "https://us-west-2-api.cloudconformity.com/v1/template-scanner/scan"
+print(f"🔎 Using Conformity API endpoint: {url}")
 
 headers = {
     "Content-Type": "application/json",
