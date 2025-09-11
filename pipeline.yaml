@@ -7,6 +7,8 @@ Resources:
   # ----------------------------
   ArtifactBucket:
     Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "cicd-artifacts-${AWS::AccountId}-${AWS::Region}"
 
   # ----------------------------
   # IAM Role for CodePipeline
@@ -65,12 +67,18 @@ Resources:
       Name: MyBuildProject
       Source:
         Type: CODEPIPELINE
-        BuildSpec: buildspec.yml   # Ensure this file exists in your repo root
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:6.0
+        EnvironmentVariables:
+          - Name: CONFORMITY_API_KEY
+            Value: "YOUR_API_KEY_HERE"
+          - Name: CONFORMITY_REGION
+            Value: "us-west-2"
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
 
   # ----------------------------
   # CodePipeline
@@ -112,6 +120,7 @@ Resources:
                 - Name: BuildOutput
               Configuration:
                 ProjectName: !Ref MyBuildProject
+              RunOrder: 1
 
         - Name: Deploy
           Actions:
